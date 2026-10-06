@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f5f2" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16181a" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="家計簿">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+  <title>家計簿</title>
+</head>
+<body>
+  <header class="total-bar">
+    <div class="total-label">現在の総額</div>
+    <div class="total-amount" id="total">—</div>
+  </header>
+
+  <main>
+    <!-- 入力 -->
+    <section class="view" id="view-input" data-view="input">
+      <form id="entry-form" autocomplete="off">
+        <div class="type-toggle" id="entry-type" role="radiogroup" aria-label="収入・支出">
+          <button type="button" class="type-btn" data-type="expense" role="radio">支出</button>
+          <button type="button" class="type-btn" data-type="income" role="radio">収入</button>
+        </div>
+
+        <label class="field">
+          <span class="field-label">金額</span>
+          <div class="amount-wrap">
+            <span class="yen">¥</span>
+            <input id="amount" type="text" inputmode="numeric" placeholder="0" enterkeyhint="done">
+          </div>
+        </label>
+
+        <div class="field">
+          <span class="field-label">分類</span>
+          <div class="chips" id="categories"></div>
+        </div>
+
+        <label class="field">
+          <span class="field-label">日付</span>
+          <input id="date" type="date">
+        </label>
+
+        <label class="field">
+          <span class="field-label">メモ</span>
+          <input id="memo" type="text" placeholder="任意" enterkeyhint="done">
+        </label>
+
+        <button type="submit" class="primary" id="save-btn">保存</button>
+        <p class="error" id="form-error" hidden></p>
+      </form>
+
+      <button type="button" class="link-btn" id="open-adjust">実際の総額に合わせる</button>
+      <button type="button" class="link-btn" id="open-backup">バックアップ・復元</button>
+    </section>
+
+    <!-- カレンダー -->
+    <section class="view" id="view-calendar" data-view="calendar" hidden>
+      <div class="month-nav">
+        <button type="button" class="icon-btn" id="cal-prev" aria-label="前月">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h2 id="cal-title"></h2>
+        <button type="button" class="icon-btn" id="cal-next" aria-label="翌月">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div class="cal">
+        <div class="cal-grid cal-head">
+          <span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span>
+        </div>
+        <div class="cal-grid" id="cal-days"></div>
+      </div>
+
+      <div class="month-summary">
+        <div><span>収入合計</span><strong id="sum-income" class="income"></strong></div>
+        <div><span>支出合計</span><strong id="sum-expense" class="expense"></strong></div>
+        <div><span>差し引き</span><strong id="sum-net"></strong></div>
+      </div>
+      <p class="adjust-note" id="sum-adjust" hidden></p>
+
+      <div class="list-head">
+        <h3 id="list-title"></h3>
+        <button type="button" class="link-btn small" id="list-clear" hidden>月全体を表示</button>
+      </div>
+      <div id="record-list"></div>
+    </section>
+
+    <!-- 集計 -->
+    <section class="view" id="view-summary" data-view="summary" hidden>
+      <div class="month-nav">
+        <button type="button" class="icon-btn" id="sm-prev" aria-label="前月">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+        </button>
+        <h2 id="sm-title"></h2>
+        <button type="button" class="icon-btn" id="sm-next" aria-label="翌月">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div id="sm-main">
+        <div class="sm-hero">
+          <span>支出合計</span>
+          <strong id="sm-total"></strong>
+        </div>
+        <ul class="cat-bars" id="cat-bars"></ul>
+        <p class="adjust-note" id="sm-adjust" hidden>調整は集計に含めていません</p>
+      </div>
+
+      <div id="sm-detail" hidden>
+        <button type="button" class="back-btn" id="sm-back">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+          分類ごとの集計
+        </button>
+        <div class="detail-head">
+          <h3 id="sm-detail-title"></h3>
+          <strong id="sm-detail-total"></strong>
+        </div>
+        <div id="sm-detail-list"></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tab-bar">
+    <button class="tab" data-tab="input" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      入力
+    </button>
+    <button class="tab" data-tab="calendar">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+      カレンダー
+    </button>
+    <button class="tab" data-tab="summary">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>
+      集計
+    </button>
+  </nav>
+
+  <!-- 初回：今ある全額の登録 -->
+  <dialog id="setup-dialog">
+    <form method="dialog" id="setup-form">
+      <h2>はじめに</h2>
+      <p>現金・口座・電子マネーなど、今あるお金の合計を入力してください。</p>
+      <div class="amount-wrap">
+        <span class="yen">¥</span>
+        <input id="setup-amount" type="text" inputmode="numeric" placeholder="0">
+      </div>
+      <p class="error" id="setup-error" hidden></p>
+      <button type="submit" class="primary">はじめる</button>
+      <button type="button" class="link-btn" id="setup-restore">バックアップ（CSV）から復元する</button>
+    </form>
+  </dialog>
+
+  <!-- バックアップ・復元 -->
+  <dialog id="backup-dialog">
+    <form method="dialog">
+      <h2>バックアップ・復元</h2>
+      <p>すべての記録をCSVファイルに書き出します。iPhoneでは「"ファイル"に保存」を選ぶと、ファイルアプリに保存できます。</p>
+      <div class="adjust-row"><span>前回のバックアップ</span><span id="backup-last"></span></div>
+      <button type="button" class="primary" id="backup-export">CSVを書き出す</button>
+
+      <hr class="divider">
+      <p>書き出したCSVを読み込んで、データを元に戻します。<strong>今のデータはCSVの内容に置き換わります。</strong></p>
+      <button type="button" class="secondary" id="backup-import">CSVから復元する</button>
+      <button type="button" class="link-btn" id="backup-close">閉じる</button>
+    </form>
+  </dialog>
+
+  <!-- バックアップのおすすめ -->
+  <dialog id="remind-dialog">
+    <form method="dialog">
+      <h2>バックアップを取りませんか</h2>
+      <p id="remind-text"></p>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="remind-later">あとで</button>
+        <button type="button" class="primary" id="remind-export">書き出す</button>
+      </div>
+    </form>
+  </dialog>
+
+  <input type="file" id="import-file" accept=".csv,text/csv" hidden>
+
+  <!-- 実際の総額に合わせる -->
+  <dialog id="adjust-dialog">
+    <form method="dialog" id="adjust-form">
+      <h2>実際の総額に合わせる</h2>
+      <p>手元の実際の合計額を入力すると、差額を「調整」として記録します。調整は収入・支出の集計には含まれません。</p>
+      <div class="adjust-row"><span>アプリ上の総額</span><span id="adjust-current"></span></div>
+      <div class="amount-wrap">
+        <span class="yen">¥</span>
+        <input id="adjust-amount" type="text" inputmode="numeric" placeholder="実際の総額">
+      </div>
+      <div class="adjust-row"><span>差額</span><span id="adjust-diff">—</span></div>
+      <p class="error" id="adjust-error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="adjust-cancel">キャンセル</button>
+        <button type="submit" class="primary">記録する</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 記録の修正・削除 -->
+  <dialog id="edit-dialog">
+    <form method="dialog" id="edit-form" autocomplete="off">
+      <h2 id="edit-title">記録を修正</h2>
+
+      <div class="type-toggle" id="edit-type" role="radiogroup" aria-label="収入・支出">
+        <button type="button" class="type-btn" data-type="expense" role="radio">支出</button>
+        <button type="button" class="type-btn" data-type="income" role="radio">収入</button>
+      </div>
+
+      <label class="field" id="edit-amount-field">
+        <span class="field-label">金額</span>
+        <div class="amount-wrap">
+          <span class="yen">¥</span>
+          <input id="edit-amount" type="text" inputmode="numeric" placeholder="0">
+        </div>
+      </label>
+      <div class="adjust-row" id="edit-adjust-info" hidden><span>調整額</span><span id="edit-adjust-amount"></span></div>
+
+      <div class="field" id="edit-category-field">
+        <span class="field-label">分類</span>
+        <div class="chips" id="edit-categories"></div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">日付</span>
+        <input id="edit-date" type="date">
+      </label>
+
+      <label class="field">
+        <span class="field-label">メモ</span>
+        <input id="edit-memo" type="text" placeholder="任意">
+      </label>
+
+      <p class="error" id="edit-error" hidden></p>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="edit-cancel">キャンセル</button>
+        <button type="submit" class="primary">保存</button>
+      </div>
+      <button type="button" class="danger" id="edit-delete">この記録を削除</button>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" hidden>
+    <span id="toast-text"></span>
+    <button type="button" id="toast-undo">取り消す</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
